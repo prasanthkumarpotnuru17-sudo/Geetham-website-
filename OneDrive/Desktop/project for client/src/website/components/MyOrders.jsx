@@ -5,6 +5,8 @@ import {
   RefreshCw, MessageSquareDashed, Ban, Phone, CheckCircle2,
   AlertCircle, Info
 } from 'lucide-react';
+import { db } from '../../firebase';
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc } from 'firebase/firestore';
 
 function StatusBadge({ status }) {
   const styles = {
@@ -103,55 +105,49 @@ export default function MyOrders({ activeUser, onTriggerSMS }) {
   const [myBookings, setMyBookings] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const loadActiveUserBookings = () => {
-    if (!activeUser) { setMyBookings([]); return; }
-    const allBookings = JSON.parse(localStorage.getItem('geetham_bookings') || '[]');
-    const filtered = allBookings
-      .filter(b => b.phone.replace(/\s+/g, '') === activeUser.phone.replace(/\s+/g, '') && b.status !== 'Cancelled')
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    setMyBookings(filtered);
-  };
-
   useEffect(() => {
-    loadActiveUserBookings();
     setPhoneSearch('');
     setSearchedBookings([]);
     setHasSearched(false);
+    
+    if (!activeUser) { 
+      setMyBookings([]); 
+      return; 
+    }
+    
+    const cleanPhone = activeUser.phone.replace(/\s+/g, '');
+    const q = query(collection(db, 'bookings'), where('phone', '==', cleanPhone));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const activeBookings = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(b => b.status !== 'Cancelled')
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setMyBookings(activeBookings);
+    });
+
+    return () => unsubscribe();
   }, [activeUser]);
 
-  useEffect(() => {
-    const handleSync = () => {
-      loadActiveUserBookings();
-      if (hasSearched && phoneSearch) {
-        const allBookings = JSON.parse(localStorage.getItem('geetham_bookings') || '[]');
-        const cleanPhone = phoneSearch.replace(/\s+/g, '');
-        const filtered = allBookings
-          .filter(b => b.phone.replace(/\s+/g, '') === cleanPhone && b.status !== 'Cancelled')
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setSearchedBookings(filtered);
-      }
-    };
-    window.addEventListener('storage', handleSync);
-    window.addEventListener('bookings_updated', handleSync);
-    return () => {
-      window.removeEventListener('storage', handleSync);
-      window.removeEventListener('bookings_updated', handleSync);
-    };
-  }, [hasSearched, phoneSearch, activeUser]);
-
-  const handleLookup = (e) => {
-    e.preventDefault();
+  const handleLookup = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!phoneSearch.trim()) return;
     setLoading(true);
     setHasSearched(true);
-    setTimeout(() => {
-      const allBookings = JSON.parse(localStorage.getItem('geetham_bookings') || '[]');
+    
+    try {
       const cleanPhone = phoneSearch.replace(/\s+/g, '');
-      const filtered = allBookings
-        .filter(b => b.phone.replace(/\s+/g, '') === cleanPhone && b.status !== 'Cancelled')
+      const q = query(collection(db, 'bookings'), where('phone', '==', cleanPhone));
+      const snapshot = await getDocs(q);
+      
+      const filtered = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(b => b.status !== 'Cancelled')
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
       setSearchedBookings(filtered);
       setLoading(false);
+      
       if (filtered.length > 0) {
         onTriggerSMS({
           name: filtered[0].name, phone: filtered[0].phone,
@@ -160,20 +156,28 @@ export default function MyOrders({ activeUser, onTriggerSMS }) {
           status: filtered[0].status
         });
       }
-    }, 800);
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+    }
   };
 
-  const handleCancelBooking = (id) => {
+  const handleCancelBooking = async (id) => {
     if (!window.confirm('Are you sure you want to cancel this reservation slot?')) return;
-    const allBookings = JSON.parse(localStorage.getItem('geetham_bookings') || '[]');
-    let targetBooking = null;
-    const updated = allBookings.map(b => {
-      if (b.id === id) { targetBooking = { ...b, status: 'Cancelled' }; return targetBooking; }
-      return b;
-    });
-    localStorage.setItem('geetham_bookings', JSON.stringify(updated));
-    window.dispatchEvent(new Event('bookings_updated'));
-    if (targetBooking) onTriggerSMS(targetBooking);
+    try {
+      await updateDoc(doc(db, 'bookings', id), { status: 'Cancelled' });
+      
+      const cancelledBooking = myBookings.find(b => b.id === id) || searchedBookings.find(b => b.id === id);
+      if (cancelledBooking) {
+        onTriggerSMS({ ...cancelledBooking, status: 'Cancelled' });
+      }
+      
+      if (!activeUser && hasSearched) {
+        handleLookup();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (

@@ -7,10 +7,5 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      'react-is': path.resolve(__dirname, 'src/react-is-shim.js')
-    }
-  }
+  plugins: [react()]
 })

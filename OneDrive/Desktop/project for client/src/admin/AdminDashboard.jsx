@@ -34,12 +34,21 @@ import {
   Star,
   Activity
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, 
-  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
-  BarChart, Bar, Legend,
-  PieChart, Pie, Cell 
-} from 'recharts';
+import { db } from '../firebase';
+import { collection, onSnapshot, query, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+const ResponsiveContainer = ({children}) => <div className="w-full h-full relative">{children}</div>;
+const AreaChart = () => <div className="w-full h-full bg-brand-gold/5 rounded-xl border border-brand-gold/10 flex items-center justify-center text-brand-gold font-serif text-sm">Visualizations Disabled (Update in Progress)</div>;
+const BarChart = () => <div className="w-full h-full bg-brand-gold/5 rounded-xl border border-brand-gold/10 flex items-center justify-center text-brand-gold font-serif text-sm">Visualizations Disabled (Update in Progress)</div>;
+const PieChart = () => <div className="w-full h-full bg-brand-gold/5 rounded-xl border border-brand-gold/10 flex items-center justify-center text-brand-gold font-serif text-sm">Visualizations Disabled (Update in Progress)</div>;
+const Area = () => null;
+const XAxis = () => null;
+const YAxis = () => null;
+const Tooltip = () => null;
+const CartesianGrid = () => null;
+const Bar = () => null;
+const Legend = () => null;
+const Pie = () => null;
+const Cell = () => null;
 
 export default function AdminDashboard({ isOpen, onClose }) {
   const [activeSection, setActiveSection] = useState('Dashboard');
@@ -96,18 +105,6 @@ export default function AdminDashboard({ isOpen, onClose }) {
     tag: ''
   });
 
-  // Load bookings from localStorage
-  const loadBookings = () => {
-    const data = JSON.parse(localStorage.getItem('geetham_bookings') || '[]');
-    data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    setBookings(data);
-  };
-
-  const loadCustomers = () => {
-    const users = JSON.parse(localStorage.getItem('geetham_users') || '[]');
-    setCustomers(users);
-  };
-
   const loadActiveUser = () => {
     try {
       const active = JSON.parse(localStorage.getItem('geetham_active_user') || 'null');
@@ -118,22 +115,28 @@ export default function AdminDashboard({ isOpen, onClose }) {
   };
 
   useEffect(() => {
-    if (isOpen) {
-      loadBookings();
-      loadCustomers();
-      loadActiveUser();
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
 
-  useEffect(() => {
-    const handleSync = () => {
-      loadBookings();
-      loadCustomers();
-      loadActiveUser();
+    loadActiveUser();
+
+    // Listen to bookings collection in real-time
+    const unsubscribeBookings = onSnapshot(collection(db, 'bookings'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setBookings(data);
+    });
+
+    // Listen to users collection in real-time
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCustomers(usersList);
+    });
+
+    return () => {
+      unsubscribeBookings();
+      unsubscribeUsers();
     };
-    window.addEventListener('bookings_updated', handleSync);
-    return () => window.removeEventListener('bookings_updated', handleSync);
-  }, []);
+  }, [isOpen]);
 
   // Sync menu state to localStorage
   useEffect(() => {
@@ -245,49 +248,46 @@ export default function AdminDashboard({ isOpen, onClose }) {
   };
 
   // Delete Customer Account helper
-  const handleDeleteCustomer = (phone) => {
+  const handleDeleteCustomer = async (phone) => {
     if (!window.confirm("Are you sure you want to permanently delete this customer account?")) return;
-    const filtered = customers.filter(u => u.phone !== phone);
-    localStorage.setItem('geetham_users', JSON.stringify(filtered));
-    setCustomers(filtered);
     
-    // Also clear active user session if this user was logged in
-    const active = JSON.parse(localStorage.getItem('geetham_active_user') || 'null');
-    if (active && active.phone === phone) {
-      localStorage.removeItem('geetham_active_user');
-      window.dispatchEvent(new Event('bookings_updated'));
+    try {
+      await deleteDoc(doc(db, 'users', phone));
+      
+      const active = JSON.parse(localStorage.getItem('geetham_active_user') || 'null');
+      if (active && active.phone === phone) {
+        localStorage.removeItem('geetham_active_user');
+        window.dispatchEvent(new Event('bookings_updated'));
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
   // Update Status helper
-  const handleUpdateStatus = (id, newStatus) => {
-    const updated = bookings.map(b => {
-      if (b.id === id) {
-        const tableNum = newStatus === 'Confirmed' ? `T-0${Math.floor(Math.random() * 9) + 1}` : b.tableNumber || 'N/A';
-        return { ...b, status: newStatus, tableNumber: tableNum };
-      }
-      return b;
-    });
-    localStorage.setItem('geetham_bookings', JSON.stringify(updated));
-    setBookings(updated);
-    window.dispatchEvent(new Event('bookings_updated'));
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      const booking = bookings.find(b => b.id === id);
+      const tableNum = newStatus === 'Confirmed' ? `T-0${Math.floor(Math.random() * 9) + 1}` : booking?.tableNumber || 'N/A';
+      await updateDoc(doc(db, 'bookings', id), { status: newStatus, tableNumber: tableNum });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Delete Booking helper
-  const handleDeleteBooking = (id) => {
+  const handleDeleteBooking = async (id) => {
     if (!window.confirm("Are you sure you want to permanently delete this reservation?")) return;
-    const filtered = bookings.filter(b => b.id !== id);
-    localStorage.setItem('geetham_bookings', JSON.stringify(filtered));
-    setBookings(filtered);
-    window.dispatchEvent(new Event('bookings_updated'));
+    try {
+      await deleteDoc(doc(db, 'bookings', id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Clear Database helper
   const handleClearAll = () => {
-    if (!window.confirm("WARNING: Are you sure you want to clear the entire reservation database?")) return;
-    localStorage.removeItem('geetham_bookings');
-    setBookings([]);
-    window.dispatchEvent(new Event('bookings_updated'));
+    if (!window.confirm("WARNING: Firebase bulk delete not implemented yet! Please delete documents manually via Firebase console.")) return;
   };
 
   // Interactive Menu Management Handlers
