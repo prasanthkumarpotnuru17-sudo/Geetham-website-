@@ -34,7 +34,12 @@ import {
   Star,
   Activity
 } from 'lucide-react';
-// Recharts removed due to production minification crash
+import { 
+  ResponsiveContainer, 
+  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
+  BarChart, Bar, Legend,
+  PieChart, Pie, Cell 
+} from 'recharts';
 
 export default function AdminDashboard({ isOpen, onClose }) {
   const [activeSection, setActiveSection] = useState('Dashboard');
@@ -583,22 +588,22 @@ export default function AdminDashboard({ isOpen, onClose }) {
                     <h3 className="font-serif text-lg font-bold text-white">Revenue & Orders Growth</h3>
                     <p className="text-[10px] text-brand-cream-ivory/50 uppercase font-semibold">Live 30-day analytics tracking</p>
                   </div>
-                  <div className="w-full h-[300px] flex items-end gap-2 pb-6 pt-10 border-b border-brand-gold/10 relative">
-                    <div className="absolute left-0 bottom-0 top-0 w-full flex flex-col justify-between pointer-events-none opacity-20">
-                      <div className="border-b border-brand-gold border-dashed w-full" />
-                      <div className="border-b border-brand-gold border-dashed w-full" />
-                      <div className="border-b border-brand-gold border-dashed w-full" />
-                      <div className="border-b border-brand-gold border-dashed w-full" />
-                    </div>
-                    {revenueData.map((d, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-2 group z-10 h-full justify-end">
-                        <div 
-                          className="w-full bg-gradient-to-t from-brand-gold to-brand-saffron rounded-t-sm group-hover:opacity-80 transition-opacity" 
-                          style={{ height: `${Math.max((d.revenue / 25000) * 100, 5)}%` }}
-                        />
-                        <span className="text-[9px] text-brand-cream-ivory/40 uppercase rotate-[-45deg] origin-top-left -ml-2">{d.name}</span>
-                      </div>
-                    ))}
+                  <div className="w-full h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#CFA851" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="#CFA851" stopOpacity={0.0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(207,168,81,0.08)" />
+                        <XAxis dataKey="name" stroke="rgba(247,244,235,0.4)" fontSize={10} />
+                        <YAxis stroke="rgba(247,244,235,0.4)" fontSize={10} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0D2A1C', border: '1px solid rgba(207,168,81,0.25)', color: '#F7F4EB', fontSize: 11 }} />
+                        <Area type="monotone" dataKey="revenue" stroke="#CFA851" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" name="Revenue (₹)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
 
@@ -608,13 +613,25 @@ export default function AdminDashboard({ isOpen, onClose }) {
                     <h3 className="font-serif text-lg font-bold text-white">Top Categories</h3>
                     <p className="text-[10px] text-brand-cream-ivory/50 uppercase font-semibold">Sales distribution percent</p>
                   </div>
-                  <div className="w-full h-[220px] flex flex-col items-center justify-center gap-4">
-                    <div className="w-32 h-32 rounded-full border-[10px] border-brand-gold border-r-brand-saffron border-t-brand-saffron-dark relative flex items-center justify-center bg-brand-green-deep shadow-[0_0_30px_rgba(207,168,81,0.15)]">
-                      <div className="text-center">
-                        <span className="block font-serif text-2xl font-bold text-white">100%</span>
-                        <span className="block text-[8px] text-brand-cream-ivory/50 uppercase tracking-widest">Categories</span>
-                      </div>
-                    </div>
+                  <div className="w-full h-[220px] flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categoryData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={85}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {categoryData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ backgroundColor: '#0D2A1C', border: '1px solid rgba(207,168,81,0.25)', color: '#F7F4EB', fontSize: 11 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-4 border-t border-brand-gold/10 pt-4 text-xs font-semibold">
                     {categoryData.map((cat, idx) => (
@@ -637,28 +654,18 @@ export default function AdminDashboard({ isOpen, onClose }) {
                     <h3 className="font-serif text-lg font-bold text-white">Table Reservations vs Walk-ins</h3>
                     <p className="text-[10px] text-brand-cream-ivory/50 uppercase font-semibold">Weekly comparison logs</p>
                   </div>
-                  <div className="w-full h-[280px] flex flex-col pt-6">
-                    <div className="flex-1 flex items-end gap-3 pb-6 border-b border-brand-gold/10 relative">
-                      <div className="absolute left-0 bottom-0 top-0 w-full flex flex-col justify-between pointer-events-none opacity-20">
-                        <div className="border-b border-brand-gold border-dashed w-full" />
-                        <div className="border-b border-brand-gold border-dashed w-full" />
-                        <div className="border-b border-brand-gold border-dashed w-full" />
-                        <div className="border-b border-brand-gold border-dashed w-full" />
-                      </div>
-                      {bookingsData.map((d, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1 z-10 h-full justify-end">
-                          <div className="w-full flex items-end gap-1 h-[85%]">
-                            <div className="flex-1 bg-brand-gold rounded-t-sm" style={{ height: `${Math.max((d.Bookings / 80) * 100, 5)}%` }} />
-                            <div className="flex-1 bg-brand-saffron rounded-t-sm" style={{ height: `${Math.max((d.WalkIns / 80) * 100, 5)}%` }} />
-                          </div>
-                          <span className="text-[9px] text-brand-cream-ivory/40 uppercase pt-2">{d.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-center gap-4 mt-4">
-                      <span className="text-[10px] flex items-center gap-1.5 font-bold text-brand-cream-ivory/80"><div className="w-3 h-3 bg-brand-gold rounded-sm"/> Bookings</span>
-                      <span className="text-[10px] flex items-center gap-1.5 font-bold text-brand-cream-ivory/80"><div className="w-3 h-3 bg-brand-saffron rounded-sm"/> Walk-ins</span>
-                    </div>
+                  <div className="w-full h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={bookingsData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(207,168,81,0.08)" />
+                        <XAxis dataKey="name" stroke="rgba(247,244,235,0.4)" fontSize={10} />
+                        <YAxis stroke="rgba(247,244,235,0.4)" fontSize={10} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0D2A1C', border: '1px solid rgba(207,168,81,0.25)', color: '#F7F4EB', fontSize: 11 }} />
+                        <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
+                        <Bar dataKey="Bookings" fill="#CFA851" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="WalkIns" fill="#D95A1E" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
 
