@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import LoadingScreen from './website/components/LoadingScreen';
 import TopInfoBar from './website/components/TopInfoBar';
 import Navbar from './website/components/Navbar';
@@ -14,8 +14,9 @@ import MyOrders from './website/components/MyOrders';
 import OrderSection from './website/components/OrderSection';
 import Footer from './website/components/Footer';
 import BookingModal from './website/components/BookingModal';
-import AdminDashboard from './admin/AdminDashboardV2';
-import PremiumAdminDashboard from './admin/AdminDashboard';
+
+const AdminDashboard = lazy(() => import('./admin/AdminDashboardV2'));
+const PremiumAdminDashboard = lazy(() => import('./admin/AdminDashboard'));
 import AuthModal from './website/components/AuthModal';
 import SMSAlertOverlay from './website/components/SMSAlertOverlay';
 import WhatsAppButton from './website/components/WhatsAppButton';
@@ -231,23 +232,26 @@ export default function App() {
         />
 
         {/* Reservation POS Console Database Panel */}
-        <AdminDashboard 
-          isOpen={isAdminOpen} 
-          onClose={() => setIsAdminOpen(false)} 
-        />
+        <Suspense fallback={null}>
+          <AdminDashboard 
+            isOpen={isAdminOpen} 
+            onClose={() => setIsAdminOpen(false)} 
+          />
+        </Suspense>
 
         {/* Premium Standing Restaurant SaaS Admin Dashboard */}
-        <PremiumAdminDashboard 
-          isOpen={isPremiumAdminOpen} 
-          onClose={() => {
-            setIsPremiumAdminOpen(false);
-            // Optionally clear the query parameter from URL bar to clean up
-            if (window.history.pushState) {
-              const cleanUrl = window.location.origin + window.location.pathname;
-              window.history.pushState({ path: cleanUrl }, '', cleanUrl);
-            }
-          }} 
-        />
+        <Suspense fallback={null}>
+          <PremiumAdminDashboard 
+            isOpen={isPremiumAdminOpen} 
+            onClose={() => {
+              setIsPremiumAdminOpen(false);
+              if (window.history.pushState) {
+                const cleanUrl = window.location.origin + window.location.pathname;
+                window.history.pushState({ path: cleanUrl }, '', cleanUrl);
+              }
+            }} 
+          />
+        </Suspense>
 
         {/* User Account Login/Register Glass Modal */}
         <AuthModal 
