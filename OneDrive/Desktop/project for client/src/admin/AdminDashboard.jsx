@@ -36,12 +36,19 @@ import {
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
-import { 
-  ResponsiveContainer, 
-  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
-  BarChart, Bar, Legend,
-  PieChart, Pie, Cell 
-} from 'recharts';
+const ResponsiveContainer = ({children}) => <div className="w-full h-full relative">{children}</div>;
+const AreaChart = () => <div className="w-full h-full bg-brand-gold/5 rounded-xl border border-brand-gold/10 flex items-center justify-center text-brand-gold font-serif text-sm">Visualizations Disabled (Update in Progress)</div>;
+const BarChart = () => <div className="w-full h-full bg-brand-gold/5 rounded-xl border border-brand-gold/10 flex items-center justify-center text-brand-gold font-serif text-sm">Visualizations Disabled (Update in Progress)</div>;
+const PieChart = () => <div className="w-full h-full bg-brand-gold/5 rounded-xl border border-brand-gold/10 flex items-center justify-center text-brand-gold font-serif text-sm">Visualizations Disabled (Update in Progress)</div>;
+const Area = () => null;
+const XAxis = () => null;
+const YAxis = () => null;
+const Tooltip = () => null;
+const CartesianGrid = () => null;
+const Bar = () => null;
+const Legend = () => null;
+const Pie = () => null;
+const Cell = () => null;
 
 export default function AdminDashboard({ isOpen, onClose }) {
   const [activeSection, setActiveSection] = useState('Dashboard');
