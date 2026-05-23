@@ -126,13 +126,22 @@ export default function AdminDashboard({ isOpen, onClose }) {
   }, [isOpen]);
 
   useEffect(() => {
-    const handleSync = () => {
+    const handleSync = (e) => {
+      // Only sync if it's our internal event OR it's a storage event related to our data
+      if (e && e.key && !['geetham_bookings', 'geetham_users', 'geetham_active_user'].includes(e.key)) {
+        return;
+      }
       loadBookings();
       loadCustomers();
       loadActiveUser();
     };
     window.addEventListener('bookings_updated', handleSync);
-    return () => window.removeEventListener('bookings_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    
+    return () => {
+      window.removeEventListener('bookings_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
   }, []);
 
   // Sync menu state to localStorage

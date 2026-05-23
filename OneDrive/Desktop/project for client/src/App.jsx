@@ -158,7 +158,7 @@ export default function App() {
       {loading && <LoadingScreen />}
 
       {/* Main Container */}
-      <div className="min-h-screen flex flex-col relative select-none">
+      <div className="min-h-screen flex flex-col relative select-none overflow-x-hidden w-full">
         
         {/* Coordinated Sticky Header Group */}
         <header className="fixed top-0 left-0 w-full z-40 flex flex-col pointer-events-none">
