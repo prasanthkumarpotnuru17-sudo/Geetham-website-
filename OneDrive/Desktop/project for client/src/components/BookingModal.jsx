@@ -1,0 +1,368 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Calendar, Users, Clock, AlignLeft, User, Phone, CheckCircle2, Ticket } from 'lucide-react';
+
+export default function BookingModal({ isOpen, onClose, activeUser, onBookingSuccess }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    guests: '2',
+    date: '',
+    timeSlot: '7:30 PM',
+    requests: ''
+  });
+
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState(null);
+
+  // Auto pre-populate form if user is active
+  useEffect(() => {
+    if (isOpen) {
+      if (activeUser) {
+        setFormData(prev => ({
+          ...prev,
+          name: activeUser.name,
+          phone: activeUser.phone
+        }));
+      } else {
+        setFormData({
+          name: '',
+          phone: '',
+          guests: '2',
+          date: '',
+          timeSlot: '7:30 PM',
+          requests: ''
+        });
+      }
+    }
+  }, [isOpen, activeUser]);
+
+  const timeSlots = [
+    "7:30 AM", "8:30 AM", "9:30 AM", "10:30 AM", // Breakfast
+    "12:30 PM", "1:30 PM", "2:30 PM", "3:30 PM", // Lunch
+    "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM", "10:00 PM" // Dinner
+  ];
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleTimeSelect = (time) => {
+    setFormData(prev => ({ ...prev, timeSlot: time }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Quick validation
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.date) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    // Generate Unique Booking ID
+    const bookingId = `GTM-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newBooking = {
+      id: bookingId,
+      ...formData,
+      status: 'Pending', // Pending, Confirmed, Cancelled
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      // Get existing from localstorage
+      const existingBookings = JSON.parse(localStorage.getItem('geetham_bookings') || '[]');
+      existingBookings.push(newBooking);
+      
+      // Save back to localstorage
+      localStorage.setItem('geetham_bookings', JSON.stringify(existingBookings));
+      
+      // Trigger update event for live lists sync
+      window.dispatchEvent(new Event('bookings_updated'));
+
+      // Show success screen
+      setConfirmedBooking(newBooking);
+      setIsSuccess(true);
+
+      // Trigger SMS Notification Simulation
+      if (onBookingSuccess) {
+        onBookingSuccess(newBooking);
+      }
+
+      // Reset form
+      setFormData({
+        name: '',
+        phone: '',
+        guests: '2',
+        date: '',
+        timeSlot: '7:30 PM',
+        requests: ''
+      });
+    } catch (err) {
+      console.error("Local storage reservation failed:", err);
+      alert("Could not complete booking. Please try again.");
+    }
+  };
+
+  const handleClose = () => {
+    setIsSuccess(false);
+    setConfirmedBooking(null);
+    onClose();
+  };
+
+  // Get today's date formatted as YYYY-MM-DD for date-picker min restriction
+  const getTodayDateString = () => {
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
+          
+          {/* Backdrop Blur */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={handleClose}
+          />
+
+          {/* Modal Container */}
+          <motion.div
+            initial={{ scale: 0.9, y: 30, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.9, y: 30, opacity: 0 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="relative w-full max-w-lg bg-brand-cream dark:bg-brand-green-deep border border-brand-gold/25 rounded-[28px] overflow-hidden shadow-2xl z-10 flex flex-col theme-transition max-h-[90vh]"
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 py-4.5 border-b border-brand-gold/15 bg-brand-cream-surface dark:bg-[#051a10] theme-transition shrink-0">
+              <h2 className="font-serif text-2xl font-bold text-brand-charcoal dark:text-brand-cream-ivory tracking-wide flex items-center gap-2">
+                <Ticket className="w-5.5 h-5.5 text-brand-saffron" />
+                {isSuccess ? 'Reservation Invoice' : 'Book a Table'}
+              </h2>
+              <button
+                onClick={handleClose}
+                className="p-1.5 rounded-full hover:bg-brand-saffron/15 text-brand-charcoal/70 dark:text-brand-cream-ivory/70 hover:text-brand-saffron transition-colors"
+                aria-label="Close booking modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Body Content */}
+            <div className="overflow-y-auto p-6 no-scrollbar flex-grow">
+              
+              {!isSuccess ? (
+                /* Dynamic Input Form */
+                <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                  
+                  {/* Full Name input */}
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="name-input" className="text-xs font-bold tracking-widest text-brand-charcoal/70 dark:text-brand-cream-ivory/70 uppercase flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-brand-gold" />
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      id="name-input"
+                      name="name"
+                      required
+                      placeholder="Enter your booking name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl border border-brand-gold/20 dark:border-brand-gold/10 bg-brand-cream-surface dark:bg-[#0a2016] text-brand-charcoal dark:text-white focus:outline-none focus:border-brand-saffron focus:ring-1 focus:ring-brand-saffron transition-colors text-[15px]"
+                    />
+                  </div>
+
+                  {/* Phone input */}
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="phone-input" className="text-xs font-bold tracking-widest text-brand-charcoal/70 dark:text-brand-cream-ivory/70 uppercase flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-brand-gold" />
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      id="phone-input"
+                      name="phone"
+                      required
+                      placeholder="Enter your phone (e.g. 98765 43210)"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl border border-brand-gold/20 dark:border-brand-gold/10 bg-brand-cream-surface dark:bg-[#0a2016] text-brand-charcoal dark:text-white focus:outline-none focus:border-brand-saffron focus:ring-1 focus:ring-brand-saffron transition-colors text-[15px]"
+                    />
+                  </div>
+
+                  {/* Date & Guests Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Date picker */}
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="date-input" className="text-xs font-bold tracking-widest text-brand-charcoal/70 dark:text-brand-cream-ivory/70 uppercase flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-brand-gold" />
+                        Select Date *
+                      </label>
+                      <input
+                        type="date"
+                        id="date-input"
+                        name="date"
+                        required
+                        min={getTodayDateString()}
+                        value={formData.date}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-brand-gold/20 dark:border-brand-gold/10 bg-brand-cream-surface dark:bg-[#0a2016] text-brand-charcoal dark:text-white focus:outline-none focus:border-brand-saffron focus:ring-1 focus:ring-brand-saffron transition-colors text-[15px]"
+                      />
+                    </div>
+
+                    {/* Guests selector */}
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="guests-input" className="text-xs font-bold tracking-widest text-brand-charcoal/70 dark:text-brand-cream-ivory/70 uppercase flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-brand-gold" />
+                        Guests *
+                      </label>
+                      <select
+                        id="guests-input"
+                        name="guests"
+                        value={formData.guests}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-brand-gold/20 dark:border-brand-gold/10 bg-brand-cream-surface dark:bg-[#0a2016] text-brand-charcoal dark:text-white focus:outline-none focus:border-brand-saffron focus:ring-1 focus:ring-brand-saffron transition-colors text-[15px]"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                          <option key={n} value={n}>{n} {n === 1 ? 'Guest' : 'Guests'}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Time Slots Area */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold tracking-widest text-brand-charcoal/70 dark:text-brand-cream-ivory/70 uppercase flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-brand-gold" />
+                      Select Time Slot
+                    </label>
+                    <div className="grid grid-cols-4 gap-2 border border-brand-gold/10 p-3 rounded-xl bg-brand-cream-surface dark:bg-[#0a2016] max-h-[135px] overflow-y-auto no-scrollbar">
+                      {timeSlots.map(time => {
+                        const isSelected = formData.timeSlot === time;
+                        return (
+                          <button
+                            key={time}
+                            type="button"
+                            onClick={() => handleTimeSelect(time)}
+                            className={`py-2 rounded-lg text-xs font-semibold tracking-wide transition-all border ${
+                              isSelected
+                                ? 'bg-brand-saffron border-brand-saffron text-white shadow-sm scale-[1.03]'
+                                : 'bg-brand-cream dark:bg-[#0d2a1c] border-brand-gold/10 hover:border-brand-saffron text-brand-charcoal dark:text-brand-cream-ivory'
+                            }`}
+                          >
+                            {time}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Special Requests input */}
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="requests-input" className="text-xs font-bold tracking-widest text-brand-charcoal/70 dark:text-brand-cream-ivory/70 uppercase flex items-center gap-1.5">
+                      <AlignLeft className="w-3.5 h-3.5 text-brand-gold" />
+                      Special Requests (Optional)
+                    </label>
+                    <textarea
+                      id="requests-input"
+                      name="requests"
+                      rows="2"
+                      placeholder="e.g. Baby seat, wheel-chair access, window table..."
+                      value={formData.requests}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl border border-brand-gold/20 dark:border-brand-gold/10 bg-brand-cream-surface dark:bg-[#0a2016] text-brand-charcoal dark:text-white focus:outline-none focus:border-brand-saffron focus:ring-1 focus:ring-brand-saffron transition-colors text-[15px] resize-none"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    className="w-full py-4 rounded-xl bg-brand-saffron hover:bg-brand-saffron-dark text-white font-bold tracking-wide shadow-saffron-glow transition-all duration-300 hover:scale-[1.01] mt-2 select-none"
+                  >
+                    Confirm Table Reservation
+                  </button>
+
+                </form>
+              ) : (
+                /* Confirmed traditional receipt screen */
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-6 rounded-2xl bg-white dark:bg-[#0c2419] border-2 border-brand-gold/30 shadow-xl flex flex-col items-center relative text-center"
+                >
+                  
+                  {/* Top stamp circle */}
+                  <CheckCircle2 className="w-14 h-14 text-green-500 mb-4 drop-shadow-md" />
+
+                  <h3 className="font-serif text-2xl font-bold text-brand-charcoal dark:text-white mb-1">
+                    Booking Confirmed!
+                  </h3>
+                  <p className="text-xs text-brand-charcoal/50 dark:text-brand-cream-ivory/50 tracking-wider mb-6">
+                    Show this receipt at our Muttukadu entrance.
+                  </p>
+
+                  {/* Receipt box inside border */}
+                  <div className="w-full border border-dashed border-brand-gold/40 p-5 rounded-xl bg-brand-cream-surface dark:bg-[#051a10] text-left font-sans flex flex-col gap-3.5 mb-6 text-sm">
+                    {/* Unique reservation code */}
+                    <div className="flex justify-between border-b border-brand-gold/15 pb-2">
+                      <span className="font-bold text-brand-gold tracking-wide uppercase text-xs">RESERVATION ID</span>
+                      <span className="font-mono font-bold text-brand-saffron">{confirmedBooking.id}</span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-brand-charcoal/60 dark:text-brand-cream-ivory/60">GUEST NAME</span>
+                      <span className="font-semibold text-brand-charcoal dark:text-white">{confirmedBooking.name}</span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-brand-charcoal/60 dark:text-brand-cream-ivory/60">PHONE</span>
+                      <span className="font-semibold text-brand-charcoal dark:text-white">{confirmedBooking.phone}</span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-brand-charcoal/60 dark:text-brand-cream-ivory/60">GUESTS COUNT</span>
+                      <span className="font-semibold text-brand-charcoal dark:text-white">{confirmedBooking.guests} People</span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-brand-charcoal/60 dark:text-brand-cream-ivory/60">DATE & TIME</span>
+                      <span className="font-semibold text-brand-charcoal dark:text-white">{confirmedBooking.date} • {confirmedBooking.timeSlot}</span>
+                    </div>
+
+                    {confirmedBooking.requests && (
+                      <div className="flex flex-col gap-1 border-t border-brand-gold/15 pt-2">
+                        <span className="text-xs text-brand-charcoal/65 dark:text-brand-cream-ivory/65 font-semibold">SPECIAL REQUESTS</span>
+                        <p className="text-xs text-brand-charcoal/50 dark:text-brand-cream-ivory/40 italic">"{confirmedBooking.requests}"</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleClose}
+                    className="w-full py-3.5 rounded-xl bg-brand-green-light hover:bg-brand-green-moss text-white font-bold tracking-wide transition-colors"
+                  >
+                    Done & Close
+                  </button>
+
+                </motion.div>
+              )}
+
+            </div>
+          </motion.div>
+
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}

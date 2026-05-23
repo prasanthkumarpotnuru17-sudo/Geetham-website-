@@ -1,0 +1,166 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tailwind CSS v4 Luxury Theme Config System */
+@theme {
+  --color-brand-green-deep: #061D12;     /* Dark forest green background */
+  --color-brand-green-card: #0D2A1C;     /* Cards background surface */
+  --color-brand-green-light: #1A4230;    /* Muted emerald hover border */
+  --color-brand-green-moss: #2D5A42;     /* Traditional temple moss */
+  --color-brand-green-emerald: #052A1A;  /* Accent deep green */
+  
+  --color-brand-saffron: #D95A1E;        /* Warm saffron orange */
+  --color-brand-saffron-light: #FF7F4D;  /* Glowing saffron accent */
+  --color-brand-saffron-dark: #B04110;   /* Deep crimson saffron */
+  
+  --color-brand-gold: #CFA851;           /* Traditional temple gold */
+  --color-brand-gold-dark: #A68235;      /* Antique gold */
+  --color-brand-gold-light: #E5C682;     /* Soft gold glow */
+  
+  --color-brand-cream: #FDFBF7;          /* Soft luxury white bg */
+  --color-brand-cream-surface: #F5EFE6;  /* Sand background for cards */
+  --color-brand-cream-dark: #EAE3D2;     /* Warm sand border details */
+  --color-brand-cream-ivory: #F7F4EB;    /* Ivory text color */
+  
+  --color-brand-charcoal: #1C2821;       /* Premium rich black text */
+  --color-brand-charcoal-muted: #4A5B51; /* Muted gray-green for tags */
+  
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  
+  --animate-spin-slow: spin 12s linear infinite;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 3s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    @apply font-sans bg-brand-cream text-brand-charcoal transition-colors duration-500 ease-in-out selection:bg-brand-saffron selection:text-white;
+  }
+
+  body.dark {
+    @apply bg-brand-green-deep text-brand-cream-ivory;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-wide;
+  }
+}
+
+/* Custom premium scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-brand-cream-surface transition-colors duration-500;
+}
+.dark ::-webkit-scrollbar-track {
+  @apply bg-brand-green-deep;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-brand-gold/40 rounded-full hover:bg-brand-gold/60 transition-colors;
+}
+
+/* Glassmorphism Styles */
+.glass-nav {
+  background: rgba(253, 251, 247, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(207, 168, 81, 0.1);
+}
+
+.dark .glass-nav {
+  background: rgba(6, 29, 18, 0.85);
+  border-bottom: 1px solid rgba(207, 168, 81, 0.15);
+}
+
+.glass-premium {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(12, 62, 38, 0.04);
+}
+
+.dark .glass-premium {
+  background: rgba(13, 42, 28, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(207, 168, 81, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* Texture Overlays */
+.wood-accent-light {
+  background-image: linear-gradient(rgba(253, 251, 247, 0.96), rgba(253, 251, 247, 0.96)), url('https://images.unsplash.com/photo-1588854337236-6889d631faa8?q=80&w=600');
+  background-blend-mode: overlay;
+  background-size: cover;
+}
+
+.dark .wood-accent-light {
+  background-image: linear-gradient(rgba(6, 29, 18, 0.97), rgba(6, 29, 18, 0.97)), url('https://images.unsplash.com/photo-1541123437800-1bb1317badc2?q=80&w=600');
+  background-blend-mode: overlay;
+  background-size: cover;
+}
+
+/* Premium Border/Glow effects */
+.gold-border-gradient {
+  border: 1px solid transparent;
+  background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0)), linear-gradient(to right, #CFA851, #E5C682, #A68235);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+.dark .gold-border-gradient {
+  background-image: linear-gradient(rgba(13, 42, 28, 0), rgba(13, 42, 28, 0)), linear-gradient(to right, #CFA851, #DFB65D, #8E6D24);
+}
+
+/* Elegant transition utilities */
+.theme-transition {
+  transition: background-color 0.5s ease-in-out, border-color 0.5s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* Custom Cursive style overrides */
+.cursive-text {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  @apply text-brand-gold;
+}
+
+/* Swiggy Button Pulsing Ring */
+@keyframes ring-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 90, 30, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(217, 90, 30, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 90, 30, 0);
+  }
+}
+
+.pulse-ring {
+  animation: ring-pulse 2s infinite;
+}
+
+/* Hide default scrollbar for specific elements */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
