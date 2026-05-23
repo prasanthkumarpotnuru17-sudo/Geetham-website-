@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Phone, User, KeyRound, CheckCircle2, UserPlus, LogIn } from 'lucide-react';
+import { db } from '../../firebase';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [activeTab, setActiveTab] = useState('login');
@@ -9,7 +11,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [successMsg, setSuccessMsg] = useState('');
   const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); setError(''); };
   const handleTabChange = (tab) => { setActiveTab(tab); setError(''); setSuccessMsg(''); setFormData({ name: '', phone: '', password: '', confirmPassword: '' }); };
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     const { name, phone, password, confirmPassword } = formData;
     if (!name.trim() || !phone.trim() || !password.trim()) { setError('Please fill in all fields.'); return; }
@@ -17,24 +19,36 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     if (password.length < 4) { setError('Password must be at least 4 characters.'); return; }
     const cleanPhone = phone.replace(/\s+/g, '');
     try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('phone', '==', cleanPhone));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) { setError('An account with this phone number already exists.'); return; }
+      
+      const newUser = { name, phone: cleanPhone, password, createdAt: new Date().toISOString() };
+      await setDoc(doc(db, 'users', cleanPhone), newUser);
+      
       const existingUsers = JSON.parse(localStorage.getItem('geetham_users') || '[]');
-      const userExists = existingUsers.some(u => u.phone === cleanPhone);
-      if (userExists) { setError('An account with this phone number already exists.'); return; }
-      const newUser = { name, phone: cleanPhone, password };
       existingUsers.push(newUser);
       localStorage.setItem('geetham_users', JSON.stringify(existingUsers));
+      
       setSuccessMsg('Account registered successfully! Please log in.');
       setTimeout(() => { handleTabChange('login'); setFormData(prev => ({ ...prev, phone: cleanPhone })); }, 1500);
     } catch (err) { console.error(err); setError('Registration failed. Please try again.'); }
   };
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     const { phone, password } = formData;
     if (!phone.trim() || !password.trim()) { setError('Please fill in all fields.'); return; }
     const cleanPhone = phone.replace(/\s+/g, '');
     try {
-      const existingUsers = JSON.parse(localStorage.getItem('geetham_users') || '[]');
-      const foundUser = existingUsers.find(u => u.phone === cleanPhone && u.password === password);
+      const userDoc = await getDocs(query(collection(db, 'users'), where('phone', '==', cleanPhone), where('password', '==', password)));
+      let foundUser = null;
+      if (!userDoc.empty) {
+        foundUser = userDoc.docs[0].data();
+      } else {
+        const existingUsers = JSON.parse(localStorage.getItem('geetham_users') || '[]');
+        foundUser = existingUsers.find(u => u.phone === cleanPhone && u.password === password);
+      }
       if (!foundUser) { setError('Invalid phone number or password.'); return; }
       const activeUser = { name: foundUser.name, phone: foundUser.phone };
       localStorage.setItem('geetham_active_user', JSON.stringify(activeUser));

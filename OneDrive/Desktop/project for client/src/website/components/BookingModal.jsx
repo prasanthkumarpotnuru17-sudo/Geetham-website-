@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Users, Clock, AlignLeft, User, Phone, CheckCircle2, Ticket } from 'lucide-react';
+import { db } from '../../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function BookingModal({ isOpen, onClose, activeUser, onBookingSuccess }) {
   const [formData, setFormData] = useState({ name: '', phone: '', guests: '2', date: '', timeSlot: '7:30 PM', requests: '' });
@@ -10,7 +12,28 @@ export default function BookingModal({ isOpen, onClose, activeUser, onBookingSuc
   const timeSlots = ["7:30 AM","8:30 AM","9:30 AM","10:30 AM","12:30 PM","1:30 PM","2:30 PM","3:30 PM","7:00 PM","7:30 PM","8:00 PM","8:30 PM","9:00 PM","9:30 PM","10:00 PM"];
   const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
   const handleTimeSelect = (time) => setFormData(prev => ({ ...prev, timeSlot: time }));
-  const handleSubmit = (e) => { e.preventDefault(); if (!formData.name.trim() || !formData.phone.trim() || !formData.date) { alert("Please fill in all required fields."); return; } const bookingId = `GTM-${Math.floor(1000 + Math.random() * 9000)}`; const newBooking = { id: bookingId, ...formData, status: 'Pending', createdAt: new Date().toISOString() }; try { const existingBookings = JSON.parse(localStorage.getItem('geetham_bookings') || '[]'); existingBookings.push(newBooking); localStorage.setItem('geetham_bookings', JSON.stringify(existingBookings)); window.dispatchEvent(new Event('bookings_updated')); setConfirmedBooking(newBooking); setIsSuccess(true); if (onBookingSuccess) onBookingSuccess(newBooking); setFormData({ name: '', phone: '', guests: '2', date: '', timeSlot: '7:30 PM', requests: '' }); } catch (err) { console.error("Local storage reservation failed:", err); alert("Could not complete booking. Please try again."); } };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.date) { alert("Please fill in all required fields."); return; }
+    const bookingId = `GTM-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newBooking = { id: bookingId, ...formData, status: 'Pending', createdAt: new Date().toISOString() };
+    try {
+      await setDoc(doc(db, 'bookings', bookingId), newBooking);
+      
+      const existingBookings = JSON.parse(localStorage.getItem('geetham_bookings') || '[]');
+      existingBookings.push(newBooking);
+      localStorage.setItem('geetham_bookings', JSON.stringify(existingBookings));
+      window.dispatchEvent(new Event('bookings_updated'));
+      
+      setConfirmedBooking(newBooking);
+      setIsSuccess(true);
+      if (onBookingSuccess) onBookingSuccess(newBooking);
+      setFormData({ name: '', phone: '', guests: '2', date: '', timeSlot: '7:30 PM', requests: '' });
+    } catch (err) {
+      console.error("Reservation failed:", err);
+      alert("Could not complete booking. Please try again.");
+    }
+  };
   const handleClose = () => { setIsSuccess(false); setConfirmedBooking(null); onClose(); };
   const getTodayDateString = () => { const today = new Date(); const dd = String(today.getDate()).padStart(2, '0'); const mm = String(today.getMonth() + 1).padStart(2, '0'); const yyyy = today.getFullYear(); return `${yyyy}-${mm}-${dd}`; };
 
